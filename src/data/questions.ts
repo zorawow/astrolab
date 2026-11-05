@@ -1,6 +1,10 @@
 import type { Question } from '../types'
+import { KNOWLEDGE_BY_ID } from './index'
+import { HOUSE_QUESTIONS } from './questions.houses'
+import { COVERAGE_QUESTIONS } from './questions.coverage'
+import { CHART_QUESTIONS } from './questions.chart'
 
-export const QUESTIONS: Question[] = [
+const BASE_QUESTIONS: Question[] = [
   // ===== 热带黄道 =====
   {
     id: 'q-trop-1',
@@ -922,6 +926,72 @@ export const QUESTIONS: Question[] = [
     sampleAnswer:
       '上升点（ASC）开启第一宫，是星盘的「入口」与外在气质、本能反应，整张盘都绕它组织，所以常作解读起点。太阳星座是核心自我与意志，回答「我想成为谁」。先看上升能定位整体风格与盘的结构，再看太阳理解内在驱动力，二者配合才完整。',
   },
+]
+
+/**
+ * 旧题兼容增强：所有题目都必须有「正确答案 + 解析 + 为什么错 + 推理链 + 复习指向」。
+ * 旧题原本只有一句 explanation/commonError，这里用题干、真实选项文字与相关知识点
+ * 补齐结构化解析；新增题目已自带完整 analysis，不再重复处理。
+ */
+function enrichLegacy(q: Question): Question {
+  const known = q.relatedIds.filter((id) => Boolean(KNOWLEDGE_BY_ID[id]))
+  const reviewIds = known.length > 0 ? known : q.relatedIds
+  const unitId = q.unitId ?? reviewIds[0]
+  const names = reviewIds.map((id) => KNOWLEDGE_BY_ID[id]?.name ?? id).join('、')
+
+  let correctText = ''
+  if (q.type === 'single') {
+    correctText = q.options.find((o) => o.id === q.answer)?.text ?? q.answer
+  } else if (q.type === 'truefalse') {
+    correctText = q.answer ? '正确' : '错误'
+  } else if (q.type === 'match') {
+    correctText = q.lefts.map((l, i) => `${l} → ${q.rights[q.correct[i]]}`).join('；')
+  } else {
+    correctText = '示范解析见下方'
+  }
+
+  const explanation =
+    q.explanation ??
+    (q.type === 'match'
+      ? `正确配对为：${correctText}。逐一核对这组对应关系，可回到相关知识点复习：${names}。`
+      : `本题考察「${q.topic}」，正确答案为「${correctText}」。相关知识点：${names}。`)
+
+  const optionNotes: Record<string, string> = {}
+  if (q.type === 'single') {
+    for (const o of q.options) {
+      if (o.id === q.answer) continue
+      optionNotes[o.id] =
+        `「${o.text}」不是本题答案。与正确选项「${correctText}」的关键区别：${explanation}` +
+        (q.commonError ? ` 常见误区：${q.commonError}` : '')
+    }
+  } else if (q.type === 'truefalse') {
+    optionNotes[q.answer ? 'false' : 'true'] =
+      `这一判断与正确答案「${correctText}」相反。${explanation}`
+  }
+
+  const analysis = q.analysis ?? {
+    whyCorrect: explanation,
+    optionNotes: Object.keys(optionNotes).length > 0 ? optionNotes : undefined,
+    reasoningChain: [
+      `先读题干，确认考察的是「${q.topic}」。`,
+      `回忆相关知识点：${names}。`,
+      `对照选项，排除与关键区别不符的项${q.commonError ? `（易错点：${q.commonError}）` : ''}。`,
+      `确认「${correctText}」成立，并记下应复习的知识点。`,
+    ],
+    reviewIds,
+    extra: `进阶：到百科查看 ${names}，再用「元素 · 模式 · 守护」或「行星 × 宫位 × 星座」的框架推一遍。`,
+    notToInfer: '占星解释属于传统象征体系，未被科学证实；本题只训练体系内的解释方法。',
+  }
+
+  return { ...q, unitId, explanation, analysis } as Question
+}
+
+/** 完整题库：旧题（保持 ID 不变）+ 宫位覆盖题 + 各模块覆盖题 + 综合与引导推理题 */
+export const QUESTIONS: Question[] = [
+  ...BASE_QUESTIONS.map(enrichLegacy),
+  ...HOUSE_QUESTIONS,
+  ...COVERAGE_QUESTIONS,
+  ...CHART_QUESTIONS,
 ]
 
 export const QUESTIONS_BY_ID: Record<string, Question> = Object.fromEntries(

@@ -1,4 +1,5 @@
-import type { ReactNode, CSSProperties } from 'react'
+import { useState, type ReactNode, type CSSProperties } from 'react'
+import { ChevronDown } from 'lucide-react'
 
 // ===== Card =====
 export function Card({
@@ -69,12 +70,14 @@ export function Badge({
   color = 'primary',
 }: {
   children: ReactNode
-  color?: 'primary' | 'gold' | 'muted'
+  color?: 'primary' | 'gold' | 'muted' | 'danger' | 'success'
 }) {
   const colors = {
     primary: 'bg-lilac/20 text-primary',
     gold: 'bg-gold/20 text-accent',
     muted: 'surface-2 text-dim',
+    danger: 'bg-red-500/15 text-red-400',
+    success: 'bg-emerald-500/15 text-emerald-500',
   }
   return (
     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${colors[color]}`}>
@@ -155,6 +158,56 @@ export function Stat({ label, value, icon }: { label: string; value: ReactNode; 
       {icon && <span className="text-primary">{icon}</span>}
       <span className="text-xl font-bold leading-none">{value}</span>
       <span className="text-xs text-dim text-center">{label}</span>
+    </div>
+  )
+}
+
+// ===== Disclosure（分层讲解用的折叠卡片）=====
+export function Disclosure({
+  title,
+  subtitle,
+  icon,
+  children,
+  defaultOpen = false,
+  tone = 'normal',
+}: {
+  title: string
+  subtitle?: string
+  icon?: ReactNode
+  children: ReactNode
+  defaultOpen?: boolean
+  tone?: 'normal' | 'gold' | 'primary'
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  const toneCls =
+    tone === 'gold'
+      ? 'border-gold/30 bg-gold/5'
+      : tone === 'primary'
+        ? 'border-lilac/30 bg-lilac/5'
+        : 'border-token'
+  return (
+    <div className={`rounded-2xl surface border overflow-hidden ${toneCls}`}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="tap w-full text-left p-4 flex items-center gap-3"
+        aria-expanded={open}
+      >
+        {icon && <span className="text-primary shrink-0">{icon}</span>}
+        <span className="flex-1 min-w-0">
+          <span className="font-semibold block">{title}</span>
+          {subtitle && <span className="text-xs text-dim mt-0.5 block">{subtitle}</span>}
+        </span>
+        <ChevronDown
+          size={18}
+          className={`text-dim shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+      {open && (
+        <div className="px-4 pb-4 pt-3 border-t border-token text-sm leading-relaxed animate-[fadeUp_0.25s_ease-out] space-y-3">
+          {children}
+        </div>
+      )}
     </div>
   )
 }

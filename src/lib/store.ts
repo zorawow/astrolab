@@ -1,35 +1,22 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import type { AppState, KnowledgeProgress, MasteryLevel, NoteItem, QuizRecord } from '../types'
+import type { AppState, ChallengeState, KnowledgeProgress, MasteryLevel, NoteItem, QuizRecord, UnitPractice } from '../types'
 import { idbGet, idbSet, idbDel } from './db'
 import { emptyProgress, applyReview, recordAnswer, markStudied, type ReviewRating } from './review'
+import { updateUnitPractice } from './coverage'
+import { buildChallengeQueue, isChallengeComplete, coveredUnits, questionsForUnit, MODULES_BY_ID } from '../data/curriculum'
+import { QUESTIONS_BY_ID } from '../data/questions'
+import { KNOWLEDGE_BY_ID } from '../data'
 import { dayKey, uid } from './util'
+import { initialData, normalizeState, BACKUP_VERSION } from './state'
+
+export { BACKUP_VERSION }
 
 // ---- idb 适配 zustand persist ----
 const idbStorage = {
   getItem: async (name: string) => idbGet(name),
   setItem: async (name: string, value: string) => idbSet(name, value),
   removeItem: async (name: string) => idbDel(name),
-}
-
-export const BACKUP_VERSION = 1
-
-function initialData(): AppState {
-  return {
-    version: BACKUP_VERSION,
-    createdAt: Date.now(),
-    completedCourses: [],
-    courseProgress: {},
-    knowledge: {},
-    favorites: [],
-    wrongQuestions: {},
-    quizHistory: [],
-    notes: [],
-    streak: { count: 0, lastDate: null },
-    studyDates: [],
-    sunSign: 'z-aries',
-    theme: 'dark',
-  }
 }
 
 interface Actions {
@@ -48,6 +35,12 @@ interface Actions {
   deleteNote: (id: string) => void
   setSunSign: (id: string) => void
   setTheme: (theme: 'dark' | 'light') => void
+  /** 完整掌握挑战：创建/恢复、记录、重置 */
+  startChallenge: (moduleId: string) => ChallengeState | null
+  recordChallengeAnswer: (moduleId: string, questionId: string, correct: boolean) => void
+  resetChallenge: (moduleId: string) => void
+  /** 挑战中实时的知识单元覆盖数 */
+  challengeCovered: (moduleId: string) => number
   exportData: () => string
   importData: (json: string) => { ok: boolean; error?: string }
   clearAll: () => void
@@ -82,6 +75,14 @@ function bumpKnowledge(
   return { ...knowledge, [id]: fn(prev) }
 }
 
+/** 题目的主知识单元：优先显式 unitId，旧题回退到第一个合法知识点 id */
+function unitOfQuestion(questionId: string, relatedIds: string[]): string | undefined {
+  const q = QUESTIONS_BY_ID[questionId]
+  if (q?.unitId && KNOWLEDGE_BY_ID[q.unitId]) return q.unitId
+  const ids = q?.relatedIds ?? relatedIds
+  return ids.find((id) => Boolean(KNOWLEDGE_BY_ID[id]))
+}
+
 export const useStore = create<Store>()(
   persist(
     (set, get) => ({
@@ -98,6 +99,7 @@ export const useStore = create<Store>()(
             : [...s.completedCourses, courseId]
           let knowledge = { ...s.knowledge }
           for (const id of relatedIds) {
+            if (!KNOWLEDGE_BY_ID[id]) continue
             knowledge = bumpKnowledge(knowledge, id, (p) => markStudied(p, now))
           }
           const streak = touchStreak(s, now)
@@ -119,20 +121,35 @@ export const useStore = create<Store>()(
           const now = Date.now()
           let knowledge = { ...s.knowledge }
           for (const id of relatedIds) {
+            if (!KNOWLEDGE_BY_ID[id]) continue
             knowledge = bumpKnowledge(knowledge, id, (p) =>
               recordAnswer(p, correct || practiced, now),
             )
           }
+
+          // v2：按知识单元记录真实练习覆盖、题型与正确率
+          const unitId = unitOfQuestion(questionId, relatedIds)
+          const practiceByUnit: Record<string, UnitPractice> = { ...(s.practiceByUnit ?? {}) }
+          if (unitId) {
+            practiceByUnit[unitId] = updateUnitPractice(practiceByUnit[unitId], {
+              correct,
+              practiced,
+              type,
+              now,
+            })
+          }
+
           const wrongQuestions = { ...s.wrongQuestions }
-          if (correct) {
+          if (correct || practiced) {
+            // 推理/引导题只记录练习，不进错题本
             delete wrongQuestions[questionId]
           } else {
             wrongQuestions[questionId] = now
           }
           const record: QuizRecord = { questionId, type, correct, practiced, at: now }
-          const quizHistory = [record, ...s.quizHistory].slice(0, 300)
+          const quizHistory = [record, ...s.quizHistory].slice(0, 500)
           const streak = touchStreak(s, now)
-          return { knowledge, wrongQuestions, quizHistory, ...streak }
+          return { knowledge, practiceByUnit, wrongQuestions, quizHistory, ...streak }
         }),
 
       reviewKnowledge: (id, rating) =>
@@ -162,6 +179,84 @@ export const useStore = create<Store>()(
 
       setTheme: (theme) => set({ theme }),
 
+      // ===== 完整掌握挑战 =====
+      startChallenge: (moduleId) => {
+        const s = get()
+        const existing = s.challenge?.[moduleId]
+        if (existing && !existing.completed && existing.queue.length > 0) return existing
+
+        const answeredIds = s.quizHistory.map((r) => r.questionId)
+        const queue = buildChallengeQueue(moduleId, s.practiceByUnit ?? {}, answeredIds)
+        if (queue.length === 0) return null
+        const now = Date.now()
+        const next: ChallengeState = {
+          moduleId,
+          queue,
+          index: 0,
+          results: {},
+          completed: false,
+          startedAt: now,
+          updatedAt: now,
+        }
+        set({ challenge: { ...(s.challenge ?? {}), [moduleId]: next } })
+        return next
+      },
+
+      recordChallengeAnswer: (moduleId, questionId, correct) =>
+        set((s) => {
+          const cur = s.challenge?.[moduleId]
+          if (!cur) return {}
+          const results = {
+            ...cur.results,
+            [questionId]: { correct, at: Date.now() },
+          }
+          // 队列做完后若仍有知识点没被覆盖，自动追加该单元的客观题，
+          // 保证「完整挑战」不会在只考了部分知识点时被判定完成。
+          let queue = [...cur.queue]
+          const m = MODULES_BY_ID[moduleId]
+          const covered = coveredUnits(
+            moduleId,
+            queue.filter((id) => Boolean(results[id])),
+          )
+          if (m && cur.index + 1 >= queue.length && m.units.some((u) => !covered.has(u))) {
+            for (const u of m.units) {
+              if (covered.has(u)) continue
+              const extra = questionsForUnit(u).find(
+                (x) =>
+                  x.type !== 'guided' && x.type !== 'reasoning' && !queue.includes(x.id),
+              )
+              if (extra) queue.push(extra.id)
+            }
+          }
+          const idx = Math.min(cur.index + 1, queue.length)
+          const completed = isChallengeComplete(moduleId, queue, results)
+          const next: ChallengeState = {
+            ...cur,
+            queue,
+            index: idx,
+            results,
+            completed,
+            updatedAt: Date.now(),
+          }
+          return { challenge: { ...(s.challenge ?? {}), [moduleId]: next } }
+        }),
+
+      resetChallenge: (moduleId) =>
+        set((s) => {
+          const challenge = { ...(s.challenge ?? {}) }
+          delete challenge[moduleId]
+          return { challenge }
+        }),
+
+      challengeCovered: (moduleId) => {
+        const cur = get().challenge?.[moduleId]
+        if (!cur) return 0
+        return coveredUnits(
+          moduleId,
+          cur.queue.filter((id) => Boolean(cur.results[id])),
+        ).size
+      },
+
       exportData: () => {
         const s = get()
         const payload = {
@@ -182,6 +277,8 @@ export const useStore = create<Store>()(
             studyDates: s.studyDates,
             sunSign: s.sunSign,
             theme: s.theme,
+            practiceByUnit: s.practiceByUnit,
+            challenge: s.challenge,
           },
         }
         return JSON.stringify(payload, null, 2)
@@ -194,22 +291,12 @@ export const useStore = create<Store>()(
           if (!data || typeof data !== 'object') {
             return { ok: false, error: '文件格式不正确' }
           }
-          const base = initialData()
-          const merged: AppState = {
-            version: data.version ?? base.version,
-            createdAt: data.createdAt ?? base.createdAt,
-            completedCourses: data.completedCourses ?? [],
-            courseProgress: data.courseProgress ?? {},
-            knowledge: data.knowledge ?? {},
-            favorites: data.favorites ?? [],
-            wrongQuestions: data.wrongQuestions ?? {},
-            quizHistory: data.quizHistory ?? [],
-            notes: data.notes ?? [],
-            streak: data.streak ?? base.streak,
-            studyDates: data.studyDates ?? [],
-            sunSign: data.sunSign ?? base.sunSign,
-            theme: data.theme ?? base.theme,
+          const d = data as Record<string, unknown>
+          if (!('completedCourses' in d || 'knowledge' in d || 'quizHistory' in d || 'challenge' in d)) {
+            return { ok: false, error: '这不是 AstroLab 学习数据备份' }
           }
+          // v1 备份自动补齐 v2 字段（practiceByUnit / challenge），旧记录原样保留
+          const merged: AppState = normalizeState(data)
           set({ ...merged })
           return { ok: true }
         } catch (e) {
@@ -221,7 +308,7 @@ export const useStore = create<Store>()(
     }),
     {
       name: 'astrolab-state',
-      version: BACKUP_VERSION,
+      version: 1, // persist 版本保持 1，通过 merge 平滑补字段，避免触发破坏性迁移
       storage: createJSONStorage(() => idbStorage),
       partialize: (s) => ({
         version: s.version,
@@ -237,6 +324,14 @@ export const useStore = create<Store>()(
         studyDates: s.studyDates,
         sunSign: s.sunSign,
         theme: s.theme,
+        practiceByUnit: s.practiceByUnit,
+        challenge: s.challenge,
+      }),
+      // 旧版存储（v1 备份 / 已上线用户）没有 practiceByUnit 与 challenge，
+      // 在这里补齐默认值；其余字段原样保留，学习记录不会丢失。
+      merge: (persisted, current) => ({
+        ...current,
+        ...normalizeState(persisted),
       }),
       // 外层在 hydrate 开始时同步执行，先捕获 _setHydrated 的引用。
       // 内层无论「成功 / 失败 / 无历史数据」都会被调用；失败时 zustand 传入 undefined，
@@ -255,7 +350,6 @@ export const useStore = create<Store>()(
 export function dueReviewCount(s: Store): number {
   return Object.values(s.knowledge).filter((k) => {
     if (k.nextReview == null) return false
-    // 复用 review.isDue 的逻辑
     const start = new Date()
     start.setHours(0, 0, 0, 0)
     return k.nextReview <= start.getTime()

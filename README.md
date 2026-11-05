@@ -86,33 +86,80 @@ PWA 本质是静态文件（`dist/` 目录），可部署到任意静态托管�
 
 ## 六、已实现功能
 
-**P0（核心可用）**
+**基础（第一阶段）**
 - 完整 PWA 结构（Manifest / Service Worker / 离线缓存 / 可安装）
-- 首页「今日学习」+ 底部五 Tab 导航（今日 / 课程 / 百科 / 练习 / 我的），桌面端自动转为侧边导航
-- 系统课程页（五阶段路线图）
-- 十二星座、十大行星、十二宫位、五种主要相位、四元素、三模式、基础术语的**完整知识卡**
-- 知识百科（搜索 / 分类 / 收藏 / 相关跳转 / 掌握状态）
-- 可答题测验（单选 / 判断 / 匹配 / 推理 四种题型）
-- 学习进度本地保存（刷新/重开不丢失）
+- 首页「今日学习」+ 底部五 Tab（今日 / 课程 / 百科 / 练习 / 我的），桌面端侧边导航
+- 知识百科：搜索 / 分类 / 收藏 / 相关跳转 / 笔记 / 复习自评
+- 间隔重复复习、每日占星内容（明确标注为娱乐与反思用途）
+- 数据导出 / 导入 / 清空（二次确认），全部保存在本机 IndexedDB
 
-**P1（优先完善）**
-- 简单可解释的间隔重复复习系统（完全不会 / 有点模糊 / 基本记住 / 非常熟悉 → 不同复习间隔）
-- 错题本、收藏、学习笔记
-- 每日学习任务（今日课程 + 待复习数量）
-- 每日占星内容（可选太阳星座，明确标注为娱乐/反思用途，非实时天象预测）
-- 数据导出 / 导入 / 恢复 / 清空（清空需二次确认）
-- 学习档案与进度统计（阶段、领域掌握、测验记录）
+**教学与练习系统升级（第二阶段）**
 
-**内容规模**
-- 16 节微课程（覆盖五阶段主要基础主题）
-- 64 道有答案与解析的题库
-- 53 张知识卡（12 星座 + 10 行星 + 12 宫位 + 5 相位 + 4 元素 + 3 模式 + 7 术语）
-- 课程 / 题目 / 知识点通过 `relatedIds` 明确关联；题目带稳定 ID，更新题库不会打乱学习记录
+*统一深度教学结构*：全部 53 个知识点都有
+①核心概念 ②多段深入解释与象征来源 ③≥2 个生活化例子 ④≥2 组相似概念对比（讲清区别）
+⑤组合应用分步推理 ⑥≥2 条「误解 / 来源 / 纠正」 ⑦总结与记忆技巧；
+并统一按「一句话理解 → 深入学习 → 实际应用」三层折叠展示。
+涉及传统／现代差异（如三王星守护、土星与冥王星的吉凶框架、容许度）处均明确标注。
+
+*课程*：55 节 = 原 16 节专题课（ID 不变，旧进度保留）+ 39 节逐知识单元课
+（12 宫 + 12 星座 + 10 行星 + 5 相位，每个知识点 1 节独立课）。
+讲解中插入随堂小题，课后练习与随堂小题分开记录；课程完成只记为「已学习」。
+
+*题库*：203 道题，5 种题型（单选 / 判断 / 匹配 / 开放推理 / 引导式推理）。
+- 十二宫位：每宫都有「宫位→含义 / 含义→宫位 / 情境→应用」三类共 36 道基础题，
+  另有 8 道宫位对比辨析题与 4 道综合应用题。
+- 十二星座 / 十大行星 / 五大相位：每个知识点都有定义辨析题与情境／几何应用题。
+- 综合星盘解读、基础术语、跨模块对比题补齐覆盖。
+- 每题都有：正确答案、为什么成立、逐干扰项区别、推理过程、应复习知识点、
+  答对后的强化与进阶理解、答错后当前选择为何不合适、边界说明。
+
+*覆盖追踪与掌握状态*：`practiceByUnit` 记录每个知识点的练习次数、正确 / 错误次数、
+练过的题型、最近练习时间、间隔答对次数。5 态规则统一且可解释：
+`尚未学习 / 已学习未练习 / 需要加强 / 基本掌握 / 熟练掌握`。
+答对一道题**不会**直接进入基本掌握或熟练掌握；无练习记录绝不会显示已掌握。
+模块完成度按真实覆盖率计算，禁止只测几个知识点就显示模块完成。
+
+*练习模式*：每日练习、快速练习（优先未练 / 需加强）、智能复习（间隔重复）、
+随机复习、错题练习、专题练习、引导式推理、对比辨析、综合应用、按知识点练习，
+以及 6 个模块各自的「完整掌握挑战」——未练优先 → 按方向轮转覆盖全部知识点 →
+对比题 → 综合题；显示题目进度与知识点覆盖进度；中途退出自动保存、下次从当前题恢复。
+
+*可视化与错题本*：十二宫 SVG 轮盘按掌握状态着色，点击任一宫查看完整讲解与对应练习；
+模块掌握概览展示 5 态分布、覆盖率、推荐下一步；升级版错题本按知识点分类，
+提供错因、正确思路、推理链、应复习知识点、就地重做与返回讲解。
+
+**内容规模（以 `npm run check` 实时输出为准）**
+- 53 个知识点 / 53 份完整深度教学
+- 55 节课程（含 39 节逐知识单元课）
+- 203 道题目（含 6 道引导式推理题）
+- 6 个教学模块，所有知识点均有对应题目
 
 **P2（本轮未做，已预留结构）**
-- 完整交互式星盘实验室（自由组合行星/星座/宫位并可视化）
-- 真实出生星盘计算（需出生时间地点与星历算法，且涉及天文计算与精度）
+- 完整交互式星盘实验室（自由组合行星 / 星座 / 宫位并可视化）
+- 真实出生星盘计算（需出生时间地点与星历算法，涉及天文计算与精度）
 - AI 占星学习教练与开放式答案语义评价
+
+---
+
+## 六·二、自动验收
+
+```bash
+npm run typecheck     # TypeScript 类型检查
+npm run check         # 内容 / 题库 / 解析 / 引用 / 覆盖 / 掌握规则 / 挑战 / 迁移 共 9 组检查
+npm run build         # 类型检查 + 生产构建（含 PWA Service Worker）
+
+# 无头浏览器渲染验证（先在 dist/ 起静态服务）
+python -m http.server 4188 --directory dist --bind 127.0.0.1
+python scripts/verify_ui.py       # 12 个页面真实渲染
+python scripts/verify_flows.py    # 5 条真实交互链路（需 Chrome / Edge）
+```
+
+应用内也可在「我的 → 运行内容与数据完整性自检」打开 `/#/selftest`，
+在浏览器里实时跑同一套检查。检查失败时 `npm run check` 会以非零码退出，可接入 CI。
+
+**旧数据兼容**：备份格式 v2 新增 `practiceByUnit` 与 `challenge`；
+v1 旧备份通过 `normalizeState()` 补齐空对象，已完成课程、知识掌握、测验历史、
+连续天数、收藏、错题、主题设置全部保留。IndexDB 水合与 JSON 导入走同一套归一化逻辑。
 
 ---
 
@@ -137,11 +184,33 @@ PWA 本质是静态文件（`dist/` 目录），可部署到任意静态托管�
 
 ```
 src/
-  data/        # 结构化内容：zodiac/planets/houses/aspects/elements/modalities/terminology/courses/questions/dailyContent
-  lib/         # db(IndexedDB) / store(zustand) / review(间隔重复) / util
-  components/  # Layout / ui(共用组件) / QuestionCard(互动题)
-  pages/       # Home / Courses / Lesson / Encyclopedia / KnowledgeDetail / Quiz / QuizRunner / Daily / Profile
-  types/       # 内容模型类型
-  App.tsx      # 路由 + 主题 + 离线提示
-  main.tsx     # 入口
+  data/
+    index.ts                 # 知识卡聚合 + attachTeaching()
+    teaching/                # 53 个知识点的深度教学（housesA/B, zodiac, bodies, misc, shared）
+    curriculum.ts            # 课程 → 知识点 → 题目 → 练习记录 关联中枢、逐单元课程、挑战排队
+    courses.ts               # 旧 16 课 + 39 节逐单元课
+    questions*.ts            # 旧题库增强 + 宫位 36 方向题 + 覆盖题 + 综合/引导推理题
+    zodiac / planets / houses / aspects / elements / modalities / terminology / dailyContent
+  lib/
+    state.ts                 # 初始状态 + normalizeState()（v1/v2 兼容迁移）
+    coverage.ts              # 5 态掌握规则、practiceByUnit 统计、moduleStats()
+    integrity.ts             # 9 组自动检查（浏览器 / Node 共用）
+    store.ts                 # Zustand + IndexedDB persist、挑战状态、备份导入导出
+    review.ts / db.ts / util.ts
+  components/
+    TeachingView.tsx         # 三层可展开讲解
+    HouseWheel.tsx           # 十二宫 SVG 轮盘
+    QuestionCard.tsx         # 5 种题型 + 深度反馈 + 引导推理
+    Layout.tsx / ui.tsx
+  pages/
+    Home / Courses / Lesson / Encyclopedia / KnowledgeDetail / Quiz / QuizRunner
+    ChallengeRunner / ModuleOverview / WrongBook / SelfTest / Daily / Profile
+  types/index.ts             # 全部内容模型类型
+  App.tsx                    # 路由 + 主题 + 离线提示 + 水合兜底
+  main.tsx
+scripts/
+  check-content.mjs          # npm run check
+  verify_ui.py               # 12 页无头渲染验收
+  verify_flows.py            # 5 条真实交互链路验收
+  gen_icons.py               # PWA 图标生成
 ```

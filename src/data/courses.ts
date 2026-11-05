@@ -1,4 +1,5 @@
 import type { Course } from '../types'
+import { UNIT_COURSES } from './curriculum'
 
 export const STAGES = [
   { id: 1, title: '十二星座', desc: '符号、元素、模式、守护星与易混对比' },
@@ -8,7 +9,7 @@ export const STAGES = [
   { id: 5, title: '星盘基础认识', desc: '星盘构成与解读顺序' },
 ]
 
-export const COURSES: Course[] = [
+const BASE_COURSES: Course[] = [
   // ===== 第一阶段：十二星座 =====
   {
     id: 'c1',
@@ -404,6 +405,14 @@ export const COURSES: Course[] = [
     relatedKnowledgeIds: ['t-rising', 't-mc', 'p-sun', 'p-moon', 'h-10', 'h-4'],
   },
 ]
+
+/**
+ * 完整课程表 = 16 节原有专题课（ID 保持不变，旧进度不丢）
+ * + 39 节逐知识单元深度课。按「阶段 → 课序」排列。
+ */
+export const COURSES: Course[] = [...BASE_COURSES, ...UNIT_COURSES].sort(
+  (a, b) => a.stage - b.stage || a.order - b.order,
+)
 
 export const COURSES_BY_ID: Record<string, Course> = Object.fromEntries(
   COURSES.map((c) => [c.id, c]),

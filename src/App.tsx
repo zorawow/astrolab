@@ -9,6 +9,10 @@ import Encyclopedia from './pages/Encyclopedia'
 import KnowledgeDetail from './pages/KnowledgeDetail'
 import Quiz from './pages/Quiz'
 import QuizRunner from './pages/QuizRunner'
+import ChallengeRunner from './pages/ChallengeRunner'
+import ModuleOverview from './pages/ModuleOverview'
+import WrongBook from './pages/WrongBook'
+import SelfTest from './pages/SelfTest'
 import Daily from './pages/Daily'
 import Profile from './pages/Profile'
 
@@ -74,7 +78,12 @@ export default function App() {
           <Route path="/wiki" element={<Encyclopedia />} />
           <Route path="/wiki/:id" element={<KnowledgeDetail />} />
           <Route path="/quiz" element={<Quiz />} />
+          <Route path="/quiz/challenge/:moduleId" element={<ChallengeRunner />} />
           <Route path="/quiz/:mode" element={<QuizRunner />} />
+          <Route path="/modules" element={<ModuleOverview />} />
+          <Route path="/modules/:moduleId" element={<ModuleOverview />} />
+          <Route path="/wrongbook" element={<WrongBook />} />
+          <Route path="/selftest" element={<SelfTest />} />
           <Route path="/daily" element={<Daily />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="*" element={<Home />} />

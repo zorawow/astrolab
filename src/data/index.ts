@@ -1,4 +1,4 @@
-import type { KnowledgeItem, KnowledgeCategory } from '../types'
+import type { KnowledgeItem, KnowledgeCategory, TeachingContent } from '../types'
 import { ZODIAC } from './zodiac'
 import { PLANETS } from './planets'
 import { HOUSES } from './houses'
@@ -6,6 +6,16 @@ import { ASPECTS } from './aspects'
 import { ELEMENTS } from './elements'
 import { MODALITIES } from './modalities'
 import { TERMS } from './terminology'
+import { attachTeaching, getTeaching, TEACHING_BY_ID, missingTeaching } from './teaching'
+
+// 把深度教学挂到每张知识卡上（保留原有简版字段不变）
+attachTeaching(ZODIAC)
+attachTeaching(PLANETS)
+attachTeaching(HOUSES)
+attachTeaching(ASPECTS)
+attachTeaching(ELEMENTS)
+attachTeaching(MODALITIES)
+attachTeaching(TERMS)
 
 export const ALL_KNOWLEDGE: KnowledgeItem[] = [
   ...ZODIAC,
@@ -48,6 +58,7 @@ export function searchKnowledge(query: string): KnowledgeItem[] {
       k.symbol,
       k.summary,
       k.detail,
+      k.teaching?.core ?? '',
       ...k.keywords,
     ]
       .join(' ')
@@ -55,3 +66,6 @@ export function searchKnowledge(query: string): KnowledgeItem[] {
     return hay.includes(q)
   })
 }
+
+export { getTeaching, TEACHING_BY_ID, missingTeaching }
+export type { TeachingContent }
