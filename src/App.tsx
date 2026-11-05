@@ -44,8 +44,14 @@ function OfflineBanner() {
 
 export default function App() {
   const hydrated = useStore((s) => s.hydrated)
+  // 兜底：即使 IndexedDB 被浏览器禁用、水合 Promise 迟迟不返回，也不会把用户锁在加载页
+  const [forceReady, setForceReady] = useState(false)
+  useEffect(() => {
+    const t = window.setTimeout(() => setForceReady(true), 2500)
+    return () => window.clearTimeout(t)
+  }, [])
 
-  if (!hydrated) {
+  if (!hydrated && !forceReady) {
     return (
       <div className="min-h-screen flex items-center justify-center text-dim">
         <div className="flex flex-col items-center gap-3 animate-pulse">

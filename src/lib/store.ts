@@ -238,8 +238,14 @@ export const useStore = create<Store>()(
         sunSign: s.sunSign,
         theme: s.theme,
       }),
-      onRehydrateStorage: () => (state) => {
-        state?._setHydrated()
+      // 外层在 hydrate 开始时同步执行，先捕获 _setHydrated 的引用。
+      // 内层无论「成功 / 失败 / 无历史数据」都会被调用；失败时 zustand 传入 undefined，
+      // 若依赖内层 state 就会跳过置位，导致 App 永久停在「正在唤醒星图…」。
+      onRehydrateStorage: (state) => {
+        const markHydrated = state?._setHydrated
+        return () => {
+          markHydrated?.()
+        }
       },
     },
   ),

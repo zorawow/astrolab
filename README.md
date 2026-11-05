@@ -53,6 +53,17 @@ npm run preview
 
 ## 四、部署为可访问的 PWA
 
+### GitHub Pages（自动部署，推荐）
+
+仓库内置 `.github/workflows/deploy.yml`：每次 `git push` 到 `main` 会自动执行
+`npm ci` → `npm run build` → 发布 `dist/` 到 GitHub Pages。
+
+- 在线地址：`https://zorawow.github.io/astrolab/`
+- 首次推送后，在仓库 **Settings → Pages → Build and deployment → Source** 选择 **GitHub Actions**。
+- 项目使用 `base: './'` 相对路径 + HashRouter，所以在 Pages 的 `/astrolab/` 子路径下也能正常加载，刷新不会 404。
+
+### 其他静态托管
+
 PWA 本质是静态文件（`dist/` 目录），可部署到任意静态托管。要点：
 
 1. `npm run build` 生成 `dist/`。

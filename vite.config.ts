@@ -4,6 +4,9 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  // 相对路径：本地直接打开 dist/index.html、根域名托管、GitHub Pages 的 /<repo>/ 子路径都能用
+  // 配合 HashRouter，无需服务端 404 回退
+  base: './',
   plugins: [
     react(),
     VitePWA({
@@ -18,8 +21,8 @@ export default defineConfig({
         background_color: '#1E1B3A',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/',
-        scope: '/',
+        start_url: './',
+        scope: './',
         icons: [
           {
             src: 'icon-192.png',
@@ -42,7 +45,7 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2,ico}'],
         cleanupOutdatedCaches: true,
-        navigateFallback: '/index.html',
+        navigateFallback: 'index.html',
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
       },
       devOptions: {
