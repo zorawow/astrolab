@@ -1,0 +1,128 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* 默认深色主题（神秘靛蓝） */
+  --bg: #1E1B3A;
+  --bg-2: #15132B;
+  --surface: #2A2750;
+  --surface-2: #37336A;
+  --text: #F2F0FA;
+  --text-dim: #B8B2D6;
+  --primary: #9B8DE5;
+  --accent: #D8B77C;
+  --border: rgba(255, 255, 255, 0.09);
+  --shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+  color-scheme: dark;
+}
+
+:root.light {
+  /* 浅色主题（米白） */
+  --bg: #F8F6F2;
+  --bg-2: #EDE9E1;
+  --surface: #FFFFFF;
+  --surface-2: #F1EDE4;
+  --text: #2A2750;
+  --text-dim: #6B6486;
+  --primary: #7C6DD0;
+  --accent: #BFA06A;
+  --border: rgba(30, 27, 58, 0.10);
+  --shadow: 0 8px 30px rgba(30, 27, 58, 0.10);
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* 语义化工具类（随主题切换） */
+.surface {
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.surface-2 {
+  background: var(--surface-2);
+}
+.text-dim {
+  color: var(--text-dim);
+}
+.text-primary {
+  color: var(--primary);
+}
+.text-accent {
+  color: var(--accent);
+}
+.border-token {
+  border-color: var(--border);
+}
+
+/* 滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--surface-2);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 移动端底部安全区 */
+.pb-safe {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.5rem);
+}
+.pt-safe {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 0.5rem);
+}
+
+/* 进入动画 */
+.fade-up {
+  animation: fadeUp 0.4s ease-out both;
+}
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 通用按钮交互 */
+.tap {
+  transition: transform 0.12s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+.tap:active {
+  transform: scale(0.97);
+}
+
+/* 隐藏 number input 箭头等（按需） */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

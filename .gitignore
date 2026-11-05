@@ -1,0 +1,17 @@
+# 依赖与构建产物
+node_modules/
+dist/
+.vite/
+*.local
+
+# 环境变量与密钥（切勿提交）
+.env
+.env.*
+!.env.example
+
+# 本地工具/编辑器数据
+.workbuddy/
+*.genie
+.DS_Store
+Thumbs.db
+*.log
